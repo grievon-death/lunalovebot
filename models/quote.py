@@ -1,15 +1,12 @@
-import asyncio
 import logging
 from datetime import datetime
 from typing_extensions import Self, Optional, List
 
-from sqlalchemy import  select, update, delete
-from sqlalchemy import DateTime, String, Text, Uuid, Index
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.ext.asyncio import AsyncSession as Session
+from sqlalchemy import  select, update, delete, insert, text
+from sqlalchemy import BigInteger, DateTime, String, Text, Uuid, Index
+from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from models import BaseTable, sql_engine
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +15,7 @@ class Quotes(BaseTable):
     __tablename__ = 'quotes'
     __table_args__ = (Index('quote_srv_idx', 'server'), )
 
-    id: Mapped[Uuid] = mapped_column(Uuid(), primary_key=True)
+    id: Mapped[BigInteger] = mapped_column(BigInteger(), primary_key=True, autoincrement=True)
     message: Mapped[Text] = mapped_column(Text(), nullable=False)
     server: Mapped[String] = mapped_column(String(50), nullable=False)
     created_by: Mapped[String] = mapped_column(String(50), nullable=False)
@@ -31,45 +28,41 @@ class Quotes(BaseTable):
             f'created_by: {self.created_by}, '\
             f'created_at: {self.created_at})'
 
-    async def create(self) -> Optional[Self]:
+    def create(self) -> None:
         """
         Cria o quote e retorna ele.
         """
-        quote = Quotes(
-            message=self.message,
-            server=self.server,
-            created_by=self.created_by,
-            created_at=datetime.now(),
-        )
-
         try:
-            async with Session(sql_engine) as session:
-                await session.add(quote)
-                await session.commit()
+            with Session(sql_engine) as session:
+                stmt = insert(Quotes).values(
+                    message=self.message,
+                    server=self.server,
+                    created_by=self.created_by,
+                    created_at=self.created_at,
+                )
+                session.execute(stmt)
+                session.commit()
         except Exception as e:
-            LOGGER.error('Can not create quote %s.\n%s' % (quote, e))
-            return
+            LOGGER.error('Can not create quote %s.\n%s' % (self, e))
+            raise e
 
-        LOGGER.info('Created quote %s', quote)
-        return quote
+        LOGGER.info('Created quote %s', self)
 
-    async def get(self, id: Uuid) -> Optional[Self]:
+    def get(self, id: int) -> Optional[Self]:
         """
         Retorna um objeto baseado no id.
-        """    
+        """
         try:
-            async with Session(sql_engine) as session:
+            with Session(sql_engine) as session:
                 stmt = select(Quotes).where(Quotes.id == id)
-                cursor = await session.execute(stmt)
+                cursor = session.execute(stmt)
                 quote = cursor.scalar_one_or_none()
+                return quote
         except Exception as e:
             LOGGER.error(e)
-            return
+            raise e
 
-        LOGGER.info('Get quote %s', quote)
-        return quote
-
-    async def all(self, server: str) -> Optional[List[Self]]:
+    def all(self, server: str) -> Optional[List[Self]]:
         """
         Captura todos os quotes.
         """
@@ -78,29 +71,51 @@ class Quotes(BaseTable):
             return []
 
         try:
-            async with Session(sql_engine) as session:
+            with Session(sql_engine) as session:
                 stmt = select(Quotes).where(server == self.server)
-                cursor  = await session.execute(stmt)
+                cursor  = session.execute(stmt)
                 response = cursor.scalars().all()
             return response
         except Exception as e:
             LOGGER.error('Can not get all cotes cause: %s', e)
+            raise e
 
-    async def update(self) -> None:
+    def get_ids_by_server(self, server: str) -> List[str]:
+        """
+        Retorna uma lista de IDs baseado no servidor.
+        """
+        if not server:
+            LOGGER.warning('Please, insert a server to get quotes IDs.')
+            return
+
+        try:
+            with Session(sql_engine) as session:
+                stmt = text(f'''
+                    select id
+                    from quotes
+                    where server = '{server}';
+                ''')
+                cursor = session.execute(stmt)
+                return cursor.scalars().all()
+        except Exception as e:
+            LOGGER.error(e)
+            raise e
+
+    def update(self) -> None:
         """
         Altera um usuário.
         """
         try:
-            async with Session(sql_engine) as session:
+            with Session(sql_engine) as session:
                 stmt = update(Quotes)\
                     .where(Quotes.id == self.id)\
                     .values(message=self.message)
-                await session.execute(stmt)
-                await session.commit()
+                session.execute(stmt)
+                session.commit()
         except Exception as e:
             LOGGER.error(e)
 
-    async def delete(self, id: Optional[Uuid]) -> None:
+    def delete(self, id: Optional[Uuid]) -> None:
         """
         Remove um quote do banco de dados.
         """
@@ -110,10 +125,10 @@ class Quotes(BaseTable):
             LOGGER.error('Can not delete id %s', id)
 
         try:
-            async with Session(sql_engine) as session:
+            with Session(sql_engine) as session:
                 stmt = delete(Quotes).where(Quotes.id == id)
-                await session.execute(stmt)
-                await session.commit()
+                session.execute(stmt)
+                session.commit()
         except Exception as e:
             LOGGER.error(e)
         else:
@@ -121,9 +136,4 @@ class Quotes(BaseTable):
 
     @staticmethod
     def migrate() -> None:
-        async def migration() -> None:
-            async with sql_engine.begin() as session:
-                await session.run_sync(Quotes.metadata.create_all)
-                await session.commit()
-            return
-        asyncio.run(migration())
+        Quotes.metadata.create_all(sql_engine)
