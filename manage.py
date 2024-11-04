@@ -1,9 +1,8 @@
 import logging
 from argparse import ArgumentParser
-from threading import Thread
 
 import settings
-from core import daemons, bot
+from core import bot
 from models import quote
 from models import indicator
 
@@ -26,7 +25,7 @@ if __name__ == '__main__':
         case 'migrate':
             try:
                 quote.Quotes.migrate()
-                indicator.Indicators.init_indicators()
+                indicator.Indicators.migrate()
             except Exception as e:
                 LOGGER.error(e)
         case 'bot':
