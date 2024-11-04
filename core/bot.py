@@ -21,6 +21,10 @@ client = Bot(command_prefix='--', intents=Intents.all())
 @client.event
 async def on_message(message: Message) -> None:
     LOGGER.debug('\nAuhtor: %s\nMessage: %s' % (message.author.name, message.content))
+
+    if not message.guild:
+        return
+
     await client.process_commands(message)
 
 
