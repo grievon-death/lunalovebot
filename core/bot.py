@@ -10,8 +10,10 @@ from models.quote import Quotes
 from models.indicator import Indicators
 
 LOGGER = logging.getLogger(__name__)
+
 ERROR_MESSAGE = '**Ooops.**\n> Alguma coisa deu errado, melhor fuçar os logs!'
 ARG_FAULT = '**Ooops.**\n> É necessária uma mensagem!'
+WITHOUT_INFO = '**Ooops.**\n> Não há informações no momento.'
 
 client = Bot(command_prefix='--', intents=Intents.all())
 
@@ -46,7 +48,7 @@ async def quote(ctx: Context) -> None:
         )
         model.create()
         indicator = Indicators(server)
-        await indicator.add_quote_for(ctx.author.name)
+        await indicator.q_usage(ctx.author.name)
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
@@ -74,7 +76,7 @@ async def quote(ctx: Context) -> None:
 
 
 @client.command(aliases=['rq'])
-async def randomquote(ctx: Context) -> None:
+async def random_quote(ctx: Context) -> None:
     """
     Captura uma mensasgem aleatória.
     """
@@ -86,18 +88,56 @@ async def randomquote(ctx: Context) -> None:
         quote = model.get(id)
 
         if not quote:
-            await ctx.send(ERROR_MESSAGE)
+            await ctx.send(WITHOUT_INFO)
 
         indicator = Indicators(server)
-        await indicator.add_request_for(ctx.author.name)
+        await indicator.rq_usage(ctx.author.name)
         await ctx.send(quote.message)
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
 
 
-@client.command(aliases=['i'])
-async def indicators(ctx: Context, quantity: int=5) -> None:
+@client.command(aliases=['iq'])
+async def indicator_quote(ctx: Context, quantity: int=5) -> None:
+    """
+    Indicador do top de usuário que mais usam o comando `quote`.
+    quantity: <int> :Tamanho máximo da lista.
+    """
+    server = ctx.guild.id
+    indicator = Indicators(server=server)
+
+    try:
+        quoters = await indicator.q_get()
+
+        if not quoters:
+            await ctx.send(WITHOUT_INFO)
+            return
+
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(ERROR_MESSAGE)
+        return
+
+    try:
+        quoters_k = sorted(quoters, key=quoters.get, reverse=True) if quoters else []
+        _quoters = Embed(type='rich')
+
+        for key in quoters_k[quantity:]:
+            _quoters.add_field(
+                name=key,
+                value=quoters[key],
+            )
+
+        await ctx.send(f'**Top {quantity} criadores:**', embed=_quoters)
+
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(ERROR_MESSAGE)
+
+
+@client.command(aliases=['irq'])
+async def indicator_random_quote(ctx: Context, quantity: int=5) -> None:
     """
     Retorna o TOP criadores de mensagens e os que mais usam o comando randomquote.
     quantity: int :Tamanho da lista.
@@ -106,24 +146,20 @@ async def indicators(ctx: Context, quantity: int=5) -> None:
     indicator = Indicators(server=server)
 
     try:
-        quoters = await indicator.get_quoters()
-        requesters = await indicator.get_requesters()
-        quoters_k = sorted(quoters, key=quoters.get, reverse=True) if quoters else []
-        requesters_k = sorted(requesters, key=requesters.get, reverse=True) if requesters else []
+        requesters = await indicator.rq_get()
+
+        if not requesters:
+            await ctx.send(WITHOUT_INFO)
+            return
+
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
         return
 
     try:
-        _quoters = Embed(type='rich')
+        requesters_k = sorted(requesters, key=requesters.get, reverse=True)
         _requesters = Embed(type='rich')
-
-        for key in quoters_k[quantity:]:
-            _quoters.add_field(
-                name=key,
-                value=quoters[key],
-            )
 
         for key in requesters_k[quantity:]:
             _requesters.add_field(
@@ -131,8 +167,8 @@ async def indicators(ctx: Context, quantity: int=5) -> None:
                 value=requesters[key],
             )
 
-        await ctx.send(f'**Top {quantity} criadores:**', embed=_quoters) if quoters else None
-        await ctx.send(f'**Top {quantity}:**', embed=_requesters) if requesters else None
+        await ctx.send(f'**Top {quantity} requesters:**', embed=_requesters)
+
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
