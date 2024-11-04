@@ -5,6 +5,10 @@ from sqlalchemy.orm import DeclarativeBase
 import settings
 
 
+QUOTTERS_COLLECTION = 'quoters'
+REGISTERS_COLLECTION = 'registers'
+
+
 class BaseTable(DeclarativeBase):
     """
     Modelo mestre.
