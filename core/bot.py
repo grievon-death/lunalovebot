@@ -123,7 +123,7 @@ async def indicator_quote(ctx: Context, quantity: int=5) -> None:
         quoters_k = sorted(quoters, key=quoters.get, reverse=True) if quoters else []
         _quoters = Embed(type='rich')
 
-        for key in quoters_k[quantity:]:
+        for key in quoters_k[:quantity]:
             _quoters.add_field(
                 name=key,
                 value=quoters[key],
@@ -161,7 +161,7 @@ async def indicator_random_quote(ctx: Context, quantity: int=5) -> None:
         requesters_k = sorted(requesters, key=requesters.get, reverse=True)
         _requesters = Embed(type='rich')
 
-        for key in requesters_k[quantity:]:
+        for key in requesters_k[:quantity]:
             _requesters.add_field(
                 name=key,
                 value=requesters[key],

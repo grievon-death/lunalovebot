@@ -1,6 +1,5 @@
 export BOT_TOKEN=
 export MARIADB_URI=
-export MONGODB_URL=
-export MONGODB_NAME=
+export REDIS_URI=
 export LOGLEVEL=
 export LOGFILE=

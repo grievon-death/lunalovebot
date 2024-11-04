@@ -1,9 +1,7 @@
-import asyncio
 import logging
 from typing_extensions import Dict, Optional
 
-import settings
-from models import mongo_client, QUOTTERS_COLLECTION, REGISTERS_COLLECTION
+from models import RedisOrm
 
 
 LOGGER = logging.getLogger(__name__)
@@ -11,32 +9,17 @@ LOGGER = logging.getLogger(__name__)
 
 class Indicators:
     def __init__(self, server: str) -> None:
-        self.db = mongo_client.get_database(settings.MONGODB_NAME)
-        self.server = server
+        self.qkey = f'q:{server}'
+        self.rqkey = f'rq:{server}'
 
-    @staticmethod
-    def migrate() -> None:
+    async def _decode_dict(self, data: Dict) -> Optional[Dict]:
         """
-        Cria as condições de banco para os indicadores.
+        No retorno todos os campos vêm como bytearray, então tem que fazer esse processo aqui.
         """
         try:
-            async def migrate():
-                db = mongo_client.get_database(settings.MONGODB_NAME)
-                quoters = db.get_collection(QUOTTERS_COLLECTION)
-                requesters = db.get_collection(REGISTERS_COLLECTION)
-
-                try:
-                    await quoters.create_index('server', unique=True)
-                except Exception as e:
-                    LOGGER.debug(e)
-
-                try:
-                    await requesters.create_index('server', unique=True)
-                except Exception as e:
-                    LOGGER.debug(e)
-
-            asyncio.run(migrate())
+            return { k.decode(): int(v.decode()) for k, v in data.items()}
         except Exception as e:
+            LOGGER.debug(e)
             raise e
 
     async def q_usage(self, username: str) -> None:
@@ -45,29 +28,28 @@ class Indicators:
         """
         try:
             LOGGER.info('Add one more quote to %s', username)
-            coll = self.db.get_collection(QUOTTERS_COLLECTION)
-            quoters = await coll.find_one({ 'server': self.server })
-            _documents = dict(quoters) if quoters else None
+            _indicator = await self.q_get()
 
-            if not _documents:
-                await coll.insert_one({
-                    'server': self.server,
-                    username: 1
-                })
-                return
+            async with RedisOrm() as client:
+                if not _indicator:
+                    await client.hmset(
+                        self.qkey,
+                        {
+                            username: 1
+                        }
+                    )
+                elif not _indicator.get(username):
+                    _indicator[username] = 1
+                else:
+                    _indicator[username] += 1
 
-            _documents.pop('server')
+                await client.hmset(
+                    self.qkey,
+                    _indicator,
+                )
 
-            if not _documents.get(username):
-                _documents[username] = 1
-            else:
-                _documents[username] += 1
-
-            await coll.update_one(
-                {'server': self.server},
-                _documents,
-            )
         except Exception as e:
+            LOGGER.debug(e)
             raise e
 
     async def rq_usage(self, username: str) -> None:
@@ -75,30 +57,29 @@ class Indicators:
         Adiciona no contador do comando randomquote.
         """
         try:
-            LOGGER.info('Add one more request for quote to %s', username)
-            coll = self.db.get_collection(REGISTERS_COLLECTION)
-            requesters = await coll.find_one({ 'server': self.server })
-            _documents = dict(requesters) if requesters else None
+            LOGGER.info('Add one more random quote to %s', username)
+            _indicator = await self.rq_get()
 
-            if not _documents:  # Servidor sem indicador.
-                await coll.insert_one({
-                    'server': self.server,
-                    username: 1,
-                })
-                return
+            async with RedisOrm() as client:
+                if not _indicator:
+                    await client.hmset(
+                        self.rqkey,
+                        {
+                            username: 1
+                        }
+                    )
+                elif not _indicator.get(username):
+                    _indicator[username] = 1
+                else:
+                    _indicator[username] += 1
 
-            _id = _documents.pop('_id')
+                await client.hmset(
+                    self.rqkey,
+                    _indicator,
+                )
 
-            if not _documents.get(username):  # Usuário sem indicador.
-                _documents[username] = 1
-            else:
-                _documents[username] += 1
-
-            await coll.update_one(
-                { '_id': _id },
-                { '$set': _documents },
-            )
         except Exception as e:
+            LOGGER.debug(e)
             raise e
 
     async def q_get(self) -> Optional[Dict]:
@@ -106,19 +87,15 @@ class Indicators:
         Captura o indicador de quotadores do server.
         """
         try:
-            LOGGER.info('Getting quoters for server %s', self.server)
-            coll = self.db.get_collection(QUOTTERS_COLLECTION)
-            requesters = await coll.find_one({ 'server': self.server })
+            LOGGER.info('Getting quoters for server %s', self.qkey)
+            
+            async with RedisOrm() as client:
+                content = await client.hgetall(self.qkey)
+                content = await self._decode_dict(content)
 
-            if not requesters:
-                return
-
-            _response = dict(requesters)
-            _response.pop('server')
-            _response.pop('_id')
-            return _response
+            return content
         except Exception as e:
-            LOGGER.error(e)
+            LOGGER.debug(e)
             raise e
 
     async def rq_get(self) -> Optional[Dict]:
@@ -126,16 +103,13 @@ class Indicators:
         Captura o indicador de requisitores do server.
         """
         try:
-            LOGGER.info('Getting requesters for server %s', self.server)
-            coll = self.db.get_collection(REGISTERS_COLLECTION)
-            requesters = await coll.find_one({ 'server': self.server })
+            LOGGER.info('Getting requesters for server %s', self.rqkey)
 
-            if not requesters:
-                return
+            async with RedisOrm() as client:
+                content = await client.hgetall(self.rqkey)
+                content = await self._decode_dict(content)
 
-            _response = dict(requesters)
-            _response.pop('server')
-            _response.pop('_id')
-            return _response
+            return content
         except Exception as e:
+            LOGGER.debug(e)
             raise e
