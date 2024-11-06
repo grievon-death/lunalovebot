@@ -8,6 +8,7 @@ from discord.ext.commands import Context, Bot
 from core import Controll, naive_dt_utc_br, get_command_args, get_command_message
 from models.quote import Quotes
 from models.indicator import Indicators
+from models.lunch_place import LunchPlace
 
 LOGGER = logging.getLogger(__name__)
 
@@ -215,3 +216,76 @@ async def quote_by_id(ctx: Context) -> None:
         controll = Controll(server)
         await indicator.rq_usage(ctx.author.name)
         await controll.set_last_quote()
+
+@client.command(aliases=['l'])
+async def lunch_place(ctx: Context) -> None:
+    """
+    Salva um local de almoço no banco de dados.
+    """
+    server = ctx.guild.id
+    place = get_command_message(ctx.message.content)
+
+    if not place:
+        await ctx.send(ARG_FAULT)
+        return
+
+    try:
+        model = LunchPlace(
+            place=place,
+            server=server,
+            created_by=ctx.author.name,
+            created_at=datetime.now(),
+        )
+        model.create()
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(ERROR_MESSAGE)
+        return
+
+    try:
+        embed = Embed(type='rich', )
+        embed.add_field(
+            name='ID',
+            value=model.id,
+            inline=False
+        )
+        embed.add_field(
+            name='Usuário',
+            value=model.created_by,
+            inline=False,
+        )
+        embed.add_field(
+            name='Data',
+            value=naive_dt_utc_br(model.created_at),
+            inline=False,
+        )
+        embed.add_field(
+            name='Local',
+            value=model.place,
+            inline=False,
+        )
+        await ctx.send(embed=embed)
+    except Exception as e:
+        LOGGER.exception(e)
+        await ctx.send(ERROR_MESSAGE)
+
+@client.command(aliases=['rl', 'onde_vamos_almoçar'])
+async def random_lunch_place(ctx: Context) -> None:
+    """
+    Captura um local de almoço aleatório.
+    """
+    try:
+        server = ctx.guild.id
+        model = LunchPlace()
+        ids = model.get_ids_by_server(server)
+        _id = choice(ids)
+        place = model.get(_id)
+
+        if not place:
+            await ctx.send(WITHOUT_INFO)
+
+        await ctx.send(f'{model.get_random_intro()} {place.place}!')
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(ERROR_MESSAGE)
+
