@@ -1,26 +1,16 @@
 import logging
 from typing_extensions import Dict, Optional
 
-from models import RedisOrm
+from models import RedisBase, RedisOrm
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class Indicators:
+class Indicators(RedisBase):
     def __init__(self, server: str) -> None:
         self.qkey = f'q:{server}'
         self.rqkey = f'rq:{server}'
-
-    async def _decode_dict(self, data: Dict) -> Optional[Dict]:
-        """
-        No retorno todos os campos vêm como bytearray, então tem que fazer esse processo aqui.
-        """
-        try:
-            return { k.decode(): int(v.decode()) for k, v in data.items()}
-        except Exception as e:
-            LOGGER.debug(e)
-            raise e
 
     async def q_usage(self, username: str) -> None:
         """

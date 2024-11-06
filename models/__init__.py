@@ -1,3 +1,6 @@
+import logging
+from typing_extensions import Dict, List, Optional
+
 import redis.asyncio as redis
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -5,11 +8,26 @@ from sqlalchemy.orm import DeclarativeBase
 import settings
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class BaseTable(DeclarativeBase):
     """
     Modelo mestre.
     """
     pass
+
+
+class RedisBase:
+    async def _decode_dict(self, data: Dict) -> Optional[Dict]:
+        """
+        No retorno todos os campos vêm como bytearray, então tem que fazer esse processo aqui.
+        """
+        try:
+            return { k.decode(): int(v.decode()) for k, v in data.items()}
+        except Exception as e:
+            LOGGER.debug(e)
+            raise e
 
 
 class RedisOrm:

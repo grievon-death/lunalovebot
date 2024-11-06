@@ -5,7 +5,7 @@ from datetime import datetime
 from discord import Embed, Intents, Message
 from discord.ext.commands import Context, Bot
 
-from core import naive_dt_utc_br
+from core import Controll, naive_dt_utc_br, get_command_args, get_command_message
 from models.quote import Quotes
 from models.indicator import Indicators
 
@@ -14,18 +14,22 @@ LOGGER = logging.getLogger(__name__)
 ERROR_MESSAGE = '**Ooops.**\n> Alguma coisa deu errado, melhor fuçar os logs!'
 ARG_FAULT = '**Ooops.**\n> É necessária uma mensagem!'
 WITHOUT_INFO = '**Ooops.**\n> Não há informações no momento.'
+INVALID_ARGS = '**Ooops.**\n> Valor inválido!'
 
 client = Bot(command_prefix='--', intents=Intents.all())
 
 
 @client.event
 async def on_message(message: Message) -> None:
-    LOGGER.debug('\nAuhtor: %s\nMessage: %s' % (message.author.name, message.content))
+    try:
+        if not message.guild:
+            return
 
-    if not message.guild:
-        return
-
-    await client.process_commands(message)
+        await client.process_commands(message)
+        controll = Controll(message.guild.id)
+        await controll.set_last_message(message.author.id, message.content)
+    except Exception as e:
+        LOGGER.error(e)
 
 
 @client.command(aliases=['q'])
@@ -34,10 +38,7 @@ async def quote(ctx: Context) -> None:
     Salva uma mensagem no banco de dados.
     """
     server = ctx.guild.id
-    all_message = ctx.message.content
-    all_message = all_message.split(' ')
-    _, message = all_message[0], all_message[1:]
-    message = ' '.join(message)
+    message = get_command_message(ctx.message.content)
 
     if not message:
         await ctx.send(ARG_FAULT)
@@ -51,12 +52,14 @@ async def quote(ctx: Context) -> None:
             created_at=datetime.now(),
         )
         model.create()
-        indicator = Indicators(server)
-        await indicator.q_usage(ctx.author.name)
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
         return
+    else:
+        indicator = Indicators(server)
+        await indicator.q_usage(ctx.author.name)
+        
 
     try:
         embed = Embed(type='rich', )
@@ -101,12 +104,15 @@ async def random_quote(ctx: Context) -> None:
         if not quote:
             await ctx.send(WITHOUT_INFO)
 
-        indicator = Indicators(server)
-        await indicator.rq_usage(ctx.author.name)
-        await ctx.send(f'{quote.message}\n> by: {quote.created_by}')
+        await ctx.send(f'{quote.message}\n>By: {quote.created_by}')
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
+    else:
+        indicator = Indicators(server)
+        controll = Controll(server)
+        await indicator.rq_usage(ctx.author.name)
+        await controll.set_last_quote(id)
 
 
 @client.command(aliases=['iq'])
@@ -141,7 +147,6 @@ async def indicator_quote(ctx: Context, quantity: int=5) -> None:
             )
 
         await ctx.send(f'**Top {quantity} criadores:**', embed=_quoters)
-
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
@@ -183,3 +188,30 @@ async def indicator_random_quote(ctx: Context, quantity: int=5) -> None:
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
+
+
+@client.command(aliases=['qid'])
+async def quote_by_id(ctx: Context) -> None:
+    """
+    Retorna uma mensagem pelo ID.
+    """
+    server = ctx.guild.id
+
+    try:
+        id = int(get_command_args(ctx.message.content))
+        model = Quotes()
+        quote = model.get(id)
+
+        if not quote:
+            await ctx.send(WITHOUT_INFO)
+
+        await ctx.send(f'{quote.message}\n>By: {quote.created_by}')
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(INVALID_ARGS)
+        return
+    else:
+        indicator = Indicators(server)
+        controll = Controll(server)
+        await indicator.rq_usage(ctx.author.name)
+        await controll.set_last_quote()
