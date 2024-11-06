@@ -105,7 +105,7 @@ async def random_quote(ctx: Context) -> None:
         if not quote:
             await ctx.send(WITHOUT_INFO)
 
-        await ctx.send(f'{quote.message}\n>By: {quote.created_by}')
+        await ctx.send(f'{quote.message}\n> By: {quote.created_by}')
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
@@ -206,7 +206,7 @@ async def quote_by_id(ctx: Context) -> None:
         if not quote:
             await ctx.send(WITHOUT_INFO)
 
-        await ctx.send(f'{quote.message}\n>By: {quote.created_by}')
+        await ctx.send(f'{quote.message}\n> By: {quote.created_by}')
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(INVALID_ARGS)
@@ -216,6 +216,7 @@ async def quote_by_id(ctx: Context) -> None:
         controll = Controll(server)
         await indicator.rq_usage(ctx.author.name)
         await controll.set_last_quote()
+
 
 @client.command(aliases=['l'])
 async def lunch_place(ctx: Context) -> None:
@@ -268,6 +269,7 @@ async def lunch_place(ctx: Context) -> None:
     except Exception as e:
         LOGGER.exception(e)
         await ctx.send(ERROR_MESSAGE)
+
 
 @client.command(aliases=['rl', 'onde_vamos_almoçar'])
 async def random_lunch_place(ctx: Context) -> None:
