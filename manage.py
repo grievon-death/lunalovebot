@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 
 import settings
 from core import bot
-from models import quote
+from models import quote, lunch_place
 
 
 LOGGER = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ if __name__ == '__main__':
         case 'migrate':
             try:
                 quote.Quotes.migrate()
+                lunch_place.LunchPlace.migrate()
             except Exception as e:
                 LOGGER.error(e)
         case 'bot':

@@ -286,7 +286,7 @@ async def random_lunch_place(ctx: Context) -> None:
         if not place:
             await ctx.send(WITHOUT_INFO)
 
-        await ctx.send(f'{model.get_random_intro()} {place.place}!')
+        await ctx.send(f'> {model.get_random_intro()} {place.place}!')
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
