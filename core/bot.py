@@ -61,12 +61,19 @@ async def quote(ctx: Context) -> None:
     try:
         embed = Embed(type='rich', )
         embed.add_field(
+            name='ID',
+            value=model.id,
+            inline=False
+        )
+        embed.add_field(
             name='Usuário',
             value=model.created_by,
+            inline=False,
         )
         embed.add_field(
             name='Data',
             value=naive_dt_utc_br(model.created_at),
+            inline=False,
         )
         embed.add_field(
             name='Mensagem',
@@ -96,7 +103,7 @@ async def random_quote(ctx: Context) -> None:
 
         indicator = Indicators(server)
         await indicator.rq_usage(ctx.author.name)
-        await ctx.send(quote.message)
+        await ctx.send(f'{quote.message}\n> by: {quote.created_by}')
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
