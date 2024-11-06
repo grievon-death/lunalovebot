@@ -93,7 +93,7 @@ class LunchPlace(BaseTable):
             with Session(sql_engine) as session:
                 stmt = text(f'''
                     select id
-                    from lunch_places
+                    from lunch_place
                     where server = '{server}';
                 ''')
                 cursor = session.execute(stmt)
