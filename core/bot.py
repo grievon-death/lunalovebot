@@ -65,11 +65,6 @@ async def quote(ctx: Context) -> None:
     try:
         embed = Embed(type='rich', )
         embed.add_field(
-            name='ID',
-            value=model.id,
-            inline=False
-        )
-        embed.add_field(
             name='Usuário',
             value=model.created_by,
             inline=False,
@@ -245,11 +240,6 @@ async def lunch_place(ctx: Context) -> None:
 
     try:
         embed = Embed(type='rich', )
-        embed.add_field(
-            name='ID',
-            value=model.id,
-            inline=False
-        )
         embed.add_field(
             name='Usuário',
             value=model.created_by,
