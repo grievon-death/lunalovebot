@@ -5,7 +5,8 @@ from datetime import datetime
 from discord import Embed, Intents, Message
 from discord.ext.commands import Context, Bot
 
-from core import Controll, naive_dt_utc_br, get_command_args, get_command_message
+from core import (Controll, naive_dt_utc_br, get_command_args,
+                  get_command_message, prettify_quote)
 from models.quote import Quotes
 from models.indicator import Indicators
 from models.lunch_place import LunchPlace
@@ -44,6 +45,9 @@ async def quote(ctx: Context) -> None:
     if not message:
         await ctx.send(ARG_FAULT)
         return
+    elif not isinstance(message, str):
+        await ctx.send(INVALID_ARGS)
+        return
 
     try:
         model = Quotes(
@@ -63,23 +67,7 @@ async def quote(ctx: Context) -> None:
         
 
     try:
-        embed = Embed(type='rich', )
-        embed.add_field(
-            name='Usuário',
-            value=model.created_by,
-            inline=False,
-        )
-        embed.add_field(
-            name='Data',
-            value=naive_dt_utc_br(model.created_at),
-            inline=False,
-        )
-        embed.add_field(
-            name='Mensagem',
-            value=model.message,
-            inline=False,
-        )
-        await ctx.send(embed=embed)
+        await ctx.send(embed=prettify_quote(model))
     except Exception as e:
         LOGGER.exception(e)
         await ctx.send(ERROR_MESSAGE)
@@ -94,12 +82,13 @@ async def random_quote(ctx: Context) -> None:
         server = ctx.guild.id
         model = Quotes()
         ids = model.get_ids_by_server(server)
+
+        if not ids:
+            await ctx.send(WITHOUT_INFO)
+            return
+
         id = choice(ids)
         quote = model.get(id)
-
-        if not quote:
-            await ctx.send(WITHOUT_INFO)
-
         await ctx.send(f'{quote.message}\n> By: {quote.created_by}')
     except Exception as e:
         LOGGER.error(e)
@@ -239,7 +228,11 @@ async def lunch_place(ctx: Context) -> None:
         return
 
     try:
-        embed = Embed(type='rich', )
+        embed = Embed(type='rich')
+        embed.add_field(
+            name='ID',
+            value=model.id,
+        )
         embed.add_field(
             name='Usuário',
             value=model.created_by,
@@ -281,3 +274,23 @@ async def random_lunch_place(ctx: Context) -> None:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
 
+
+@client.command(aliases=['lqi'])
+async def last_quote_info(ctx: Context) -> None:
+    """
+    Captura todas as informações do quote anterior.
+    """
+    try:
+        model = Quotes()
+        controll = Controll(ctx.guild.id)
+        id = await controll.get_last_quote()
+        quote = model.get(id)
+
+        if not quote:
+            await ctx.send(WITHOUT_INFO)
+            return
+
+        await ctx.send('', embed=prettify_quote(quote))
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(ERROR_MESSAGE)
