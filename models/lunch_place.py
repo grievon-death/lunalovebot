@@ -41,8 +41,9 @@ class LunchPlace(BaseTable):
                     created_by=self.created_by,
                     created_at=self.created_at,
                 )
-                session.execute(stmt)
+                cursor = session.execute(stmt)
                 session.commit()
+                self.id = cursor.inserted_primary_key[0]
         except Exception as e:
             LOGGER.error('Can not create lunch place %s.\n%s' % (self, e))
             raise e
