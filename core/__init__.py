@@ -1,9 +1,11 @@
 import logging
 from typing_extensions import Optional, Union, List
-
-
 from datetime import datetime, timedelta, timezone
+
+from discord import Embed
+
 from models import RedisBase, RedisOrm
+from models.quote import Quotes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +42,51 @@ def get_command_args(message: str) -> Union[str, List[str], None]:
         return _message[0]
 
     return _message
+
+
+def prettify_quote(quote: Quotes) -> Embed:
+    """
+    Embeleza o quote.
+    """
+    message = str(quote.message)
+    ext = message[-5:].split('.')
+    ext = ext[1] if len(ext) == 2 else ''
+    embed = Embed()
+
+    if  ext in ['png', 'jpg', 'gif', 'mp4']:
+        embed.add_field(
+            name='ID',
+            value=quote.id,
+        )
+        embed.add_field(
+            name='Criado em',
+            value=naive_dt_utc_br(quote.created_at),
+        )
+        embed.add_field(
+            name='Criado por',
+            value=quote.created_by,
+        )
+        embed.set_image(url=quote.message)
+    else:
+        embed.add_field(
+            name='ID',
+            value=quote.id,
+        )
+        embed.add_field(
+            name='Criado em',
+            value=naive_dt_utc_br(quote.created_at),
+        )
+        embed.add_field(
+            name='Criado por',
+            value=quote.created_by,
+        )
+        embed.add_field(
+            name='Mensagem',
+            value=quote.message,
+            inline=False,
+        )
+
+    return embed
 
 
 class Controll(RedisBase):
