@@ -45,4 +45,9 @@ class RedisOrm:
         await self.client.close()
 
 
-sql_engine = create_engine(settings.MARIADB_URI)
+sql_engine = create_engine(
+    settings.MARIADB_URI,
+    echo_pool=True,
+    pool_pre_ping=True,
+    pool_recycle=600,
+)
