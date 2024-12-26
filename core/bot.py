@@ -28,8 +28,6 @@ async def on_message(message: Message) -> None:
             return
 
         await client.process_commands(message)
-        controll = Controll(message.guild.id)
-        await controll.set_last_message(message.author.id, message.content)
     except Exception as e:
         LOGGER.error(e)
 
