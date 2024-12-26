@@ -87,7 +87,7 @@ async def random_quote(ctx: Context) -> None:
 
         id = choice(ids)
         quote = model.get(id)
-        await ctx.send(f'{quote.message}\n> By: {quote.created_by}')
+        await ctx.send(f'{quote.message}')
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
