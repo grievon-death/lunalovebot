@@ -10,6 +10,7 @@ from core import (Controll, naive_dt_utc_br, get_command_args,
 from models.quote import Quotes
 from models.indicator import Indicators
 from models.lunch_place import LunchPlace
+from models.news import News
 
 LOGGER = logging.getLogger(__name__)
 
@@ -289,6 +290,41 @@ async def last_quote_info(ctx: Context) -> None:
             return
 
         await ctx.send('', embed=prettify_quote(quote))
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(ERROR_MESSAGE)
+
+
+@client.command(aliases=['n', 'nw', 'jornal'])
+async def news(ctx: Context) -> None:
+    """
+    Captura as últimas 5 notícias em uma fonte selecionada. Opções: [bbc]
+    """
+    try:
+        source = get_command_args(ctx.message.content) or 'bbc'
+        _news = News(source=source.lower())
+        responses = await _news.get()
+
+        for response in responses[:5]:
+            embed = Embed(type='rich')
+            embed.add_field(
+                name='Título',
+                value=response.new,
+                inline=False
+            )
+            embed.add_field(
+                name='Publicado',
+                value=response.date,
+                inline=False,
+            )
+            embed.add_field(
+                name='Notícia completa',
+                value=response.link,
+                inline=False,
+            )
+            embed.set_image(url=response.image)
+            await ctx.send('', embed=embed)
+
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
