@@ -95,4 +95,3 @@ class News:
                 data = []
 
         return [News(**d) for d in data]
-
