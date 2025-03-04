@@ -298,7 +298,7 @@ async def last_quote_info(ctx: Context) -> None:
 @client.command(aliases=['n', 'nw', 'jornal'])
 async def news(ctx: Context) -> None:
     """
-    Captura as últimas 5 notícias em uma fonte selecionada. Opções: [bbc, cnn]
+    Captura as últimas 5 notícias em uma fonte selecionada. Opções: [bbc, cnn, tecmundo]
     """
     try:
         source = get_command_args(ctx.message.content) or 'bbc'

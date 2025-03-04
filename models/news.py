@@ -4,7 +4,7 @@ from typing import Dict, List, Self
 import requests
 from bs4 import BeautifulSoup
 
-from settings import BBC_NEWS_URL, CNN_NEWS_URL
+import settings
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class News:
         """
         Captura notícias da BBC.
         """
-        html = requests.get(BBC_NEWS_URL).content
+        html = requests.get(settings.BBC_NEWS_URL).content
         soup = BeautifulSoup(html, 'html.parser')
         raw_html = soup.find('ul', class_='bbc-k6wdzo')
         raw_news = raw_html.contents
@@ -59,7 +59,7 @@ class News:
         """
         Captura nítícias da CNN Brasil.
         """
-        html = requests.get(CNN_NEWS_URL).content
+        html = requests.get(settings.CNN_NEWS_URL).content
         soup = BeautifulSoup(html, 'html.parser')
         raw_html = soup.find('div', class_='homepage__layout homepage__layout--seventy-thirty')
         raw_html = raw_html.find('ul', 'home__new')
@@ -82,6 +82,33 @@ class News:
 
         return news
 
+    async def _get_from_tec_mundo(self) -> List[Dict]:
+        """
+        Captura informações do Olhar Digital.
+        """
+        html = requests.get(settings.TEC_MUNDO_URL).content
+        soup = BeautifulSoup(html, 'html.parser')
+        raw_html = soup.find('div', class_='tec--list tec--list--lg')
+        raw_news = raw_html.contents
+        news = []
+
+        for new in raw_news:
+            _new = new.find('a', class_='tec--card__title__link')
+            _date = new.find('div', class_='tec--timestamp__item z--min-w-none')
+            _link = new.find('a', class_='tec--card__title__link')
+            _img = new.find('img', class_='tec--card__thumb__image')
+
+            if not _new: continue  # Sei lá porque, as vezes não vem nada.
+
+            news.append({
+                'new': _new.text,
+                'date': _date.text,
+                'link': _link.attrs.get('href'),
+                'image': _img.attrs.get('data-src'),
+            })
+
+        return news
+
     async def get(self) -> List[Self]:
         """
         Captura notícias da fonte.
@@ -91,6 +118,8 @@ class News:
                 data = await self._get_from_bbc()
             case 'cnn':
                 data = await self._get_from_cnn()
+            case 'tecmundo':
+                data = await self._get_from_tec_mundo()
             case _:
                 data = []
 

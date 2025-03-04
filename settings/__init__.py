@@ -4,6 +4,7 @@ from logging import config as logConf
 
 BBC_NEWS_URL = os.environ.get('BBC_NEWS_URL', 'https://www.bbc.com/portuguese/topics/cmdm4ynm24kt')
 CNN_NEWS_URL = os.environ.get('CNN_NEWS_URL', 'https://www.cnnbrasil.com.br/internacional/')
+TEC_MUNDO_URL = os.environ.get('TEC_MUNDO_URL', 'https://www.tecmundo.com.br/novidades')
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 MARIADB_URI = os.environ.get('MARIADB_URI', 'mysql://root:root@localhost:3306/lunabot')
 REDIS_URI = os.environ.get('REDIS_URI', 'redis://localhost:6379/0')
