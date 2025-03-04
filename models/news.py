@@ -11,7 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 class News:
     """
-    Realiza web scrapping para capturar notícias jornalisticas.
+    Realiza web scraping para capturar notícias jornalisticas.
     """
     new: str
     date: str
