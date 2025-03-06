@@ -301,7 +301,7 @@ async def news(ctx: Context) -> None:
     Captura as últimas 5 notícias em uma fonte selecionada. Opções: [bbc, cnn, tecmundo]
     """
     try:
-        source = get_command_args(ctx.message.content) or 'bbc'
+        source = get_command_args(ctx.message.content) or choice(['bbc', 'cnn', 'tecmundo'])
         _news = News(source=source.lower())
         responses = await _news.get()
 
