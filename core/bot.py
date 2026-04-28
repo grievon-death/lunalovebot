@@ -207,10 +207,12 @@ async def delete_quote_by_id(ctx: Context) -> None:
     """
     Deleta seu quote pelo ID.
     """
+    server = ctx.guild.id
+
     try:
         id = int(get_command_args(ctx.message.content))
         model = Quotes()
-        quote = await model.get(id)
+        quote = await model.get(id, server)
 
         if not quote:
             await ctx.send(WITHOUT_INFO)
