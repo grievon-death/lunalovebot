@@ -18,6 +18,7 @@ ERROR_MESSAGE = '**Ooops.**\n> Alguma coisa deu errado, melhor fuçar os logs!'
 ARG_FAULT = '**Ooops.**\n> É necessária uma mensagem!'
 WITHOUT_INFO = '**Ooops.**\n> Não há informações no momento.'
 INVALID_ARGS = '**Ooops.**\n> Valor inválido!'
+NOT_AUTHORIZED = '**Ooops.**\n> Você não tem autorização para fazer isso!'
 
 client = Bot(command_prefix='--', intents=Intents.all())
 
@@ -199,6 +200,31 @@ async def quote_by_id(ctx: Context) -> None:
         controll = Controll(server)
         await indicator.rq_usage(ctx.author.name)
         await controll.set_last_quote()
+
+
+@client.command(aliases=['dqi'])
+async def delete_quote_by_id(ctx: Context) -> None:
+    """
+    Deleta seu quote pelo ID.
+    """
+    try:
+        id = int(get_command_args(ctx.message.content))
+        model = Quotes()
+        quote = model.get(id)
+
+        if not quote:
+            await ctx.send(WITHOUT_INFO)
+            return
+        elif ctx.author.name != quote.created_by:
+            await ctx.send(NOT_AUTHORIZED)
+            return
+
+        model.delete(id)
+        await ctx.send(f'A mensagen de ID {id} foi removida!')
+    except Exception as e:
+        LOGGER.error(e)
+        await ctx.send(INVALID_ARGS)
+        return
 
 
 @client.command(aliases=['l'])
