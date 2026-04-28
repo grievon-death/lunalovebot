@@ -6,8 +6,15 @@ from discord import Embed
 
 from models import RedisBase, RedisOrm
 from models.quote import Quotes
+from models.lunch_place import LunchPlace
 
 LOGGER = logging.getLogger(__name__)
+
+
+async def migrate() -> None:
+    await Quotes.migrate()
+    await LunchPlace.migrate()
+
 
 
 def naive_dt_utc_br(dt: datetime) -> str:

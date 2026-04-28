@@ -5,7 +5,8 @@ from random import choice
 
 from sqlalchemy import  select, update, delete, insert, text
 from sqlalchemy import BigInteger, DateTime, String, Text, Uuid, Index
-from sqlalchemy.orm import Mapped, mapped_column, Session
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import BaseTable, sql_engine
 
@@ -29,19 +30,19 @@ class LunchPlace(BaseTable):
             f'created_by: {self.created_by}, '\
             f'created_at: {self.created_at})'
 
-    def create(self) -> None:
+    async def create(self) -> None:
         """
         Cria o local de almoço e retorna ele.
         """
         try:
-            with Session(sql_engine) as session:
+            async with AsyncSession(sql_engine) as session:
                 stmt = insert(LunchPlace).values(
                     place=self.place,
                     server=self.server,
                     created_by=self.created_by,
                     created_at=self.created_at,
                 )
-                cursor = session.execute(stmt)
+                cursor = await session.execute(stmt)
                 session.commit()
                 self.id = cursor.inserted_primary_key[0]
         except Exception as e:
@@ -50,21 +51,21 @@ class LunchPlace(BaseTable):
 
         LOGGER.info('Created lunch place %s', self)
 
-    def get(self, id: int) -> Optional[Self]:
+    async def get(self, id: int) -> Optional[Self]:
         """
         Retorna um objeto baseado no id.
         """
         try:
-            with Session(sql_engine) as session:
+            async with AsyncSession(sql_engine) as session:
                 stmt = select(LunchPlace).where(LunchPlace.id == id)
-                cursor = session.execute(stmt)
+                cursor = await session.execute(stmt)
                 quote = cursor.scalar_one_or_none()
                 return quote
         except Exception as e:
             LOGGER.error(e)
             raise e
 
-    def all(self, server: str) -> Optional[List[Self]]:
+    async def all(self, server: str) -> Optional[List[Self]]:
         """
         Captura todos os locais de almoço.
         """
@@ -73,16 +74,16 @@ class LunchPlace(BaseTable):
             return []
 
         try:
-            with Session(sql_engine) as session:
+            async with AsyncSession(sql_engine) as session:
                 stmt = select(LunchPlace).where(server == self.server)
-                cursor  = session.execute(stmt)
+                cursor  = await session.execute(stmt)
                 response = cursor.scalars().all()
             return response
         except Exception as e:
             LOGGER.error('Can not get all lunch places cause: %s', e)
             raise e
 
-    def get_ids_by_server(self, server: str) -> List[str]:
+    async def get_ids_by_server(self, server: str) -> List[str]:
         """
         Retorna uma lista de IDs baseado no servidor.
         """
@@ -91,33 +92,33 @@ class LunchPlace(BaseTable):
             return
 
         try:
-            with Session(sql_engine) as session:
+            async with AsyncSession(sql_engine) as session:
                 stmt = text(f'''
                     select id
                     from lunch_place
                     where server = '{server}';
                 ''')
-                cursor = session.execute(stmt)
+                cursor = await session.execute(stmt)
                 return cursor.scalars().all()
         except Exception as e:
             LOGGER.error(e)
             raise e
 
-    def update(self) -> None:
+    async def update(self) -> None:
         """
         Altera um local de almoço.
         """
         try:
-            with Session(sql_engine) as session:
+            async with AsyncSession(sql_engine) as session:
                 stmt = update(LunchPlace)\
                     .where(LunchPlace.id == self.id)\
                     .values(place=self.place)
-                session.execute(stmt)
-                session.commit()
+                await session.execute(stmt)
+                await session.commit()
         except Exception as e:
             LOGGER.error(e)
 
-    def delete(self, id: Optional[Uuid]) -> None:
+    async def delete(self, id: Optional[Uuid]) -> None:
         """
         Remove um local de almoço do banco de dados.
         """
@@ -127,18 +128,19 @@ class LunchPlace(BaseTable):
             LOGGER.error('Can not delete id %s', id)
 
         try:
-            with Session(sql_engine) as session:
-                stmt = delete(LunchPlace).where(LunchPlace.id == id)
-                session.execute(stmt)
-                session.commit()
+            async with AsyncSession(sql_engine) as session:
+                stmt = await delete(LunchPlace).where(LunchPlace.id == id)
+                await session.execute(stmt)
+                await session.commit()
         except Exception as e:
             LOGGER.error(e)
         else:
             LOGGER.info('Lunch place %s is removed.', id)
 
     @staticmethod
-    def migrate() -> None:
-        LunchPlace.metadata.create_all(sql_engine)
+    async def migrate() -> None:
+        async with sql_engine.begin() as session:
+            await session.run_sync(LunchPlace.metadata.create_all)
 
     @staticmethod
     def get_random_intro() -> String:

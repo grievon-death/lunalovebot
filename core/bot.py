@@ -56,7 +56,7 @@ async def quote(ctx: Context) -> None:
             created_by=ctx.author.name,
             created_at=datetime.now(),
         )
-        model.create()
+        await model.create()
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
@@ -64,7 +64,6 @@ async def quote(ctx: Context) -> None:
     else:
         indicator = Indicators(server)
         await indicator.q_usage(ctx.author.name)
-        
 
     try:
         await ctx.send(embed=prettify_quote(model))
@@ -81,7 +80,7 @@ async def random_quote(ctx: Context) -> None:
     try:
         server = ctx.guild.id
         model = Quotes()
-        ids = model.get_ids_by_server(server)
+        ids = await model.get_ids_by_server(server)
 
         if not ids:
             await ctx.send(WITHOUT_INFO)
@@ -185,10 +184,11 @@ async def quote_by_id(ctx: Context) -> None:
     try:
         id = int(get_command_args(ctx.message.content))
         model = Quotes()
-        quote = model.get(id)
+        quote = await model.get(id, server)
 
         if not quote:
             await ctx.send(WITHOUT_INFO)
+            return
 
         await ctx.send(f'{quote.message}\n> By: {quote.created_by}')
     except Exception as e:
@@ -199,7 +199,7 @@ async def quote_by_id(ctx: Context) -> None:
         indicator = Indicators(server)
         controll = Controll(server)
         await indicator.rq_usage(ctx.author.name)
-        await controll.set_last_quote()
+        await controll.set_last_quote(id)
 
 
 @client.command(aliases=['dqi'])
@@ -210,7 +210,7 @@ async def delete_quote_by_id(ctx: Context) -> None:
     try:
         id = int(get_command_args(ctx.message.content))
         model = Quotes()
-        quote = model.get(id)
+        quote = await model.get(id)
 
         if not quote:
             await ctx.send(WITHOUT_INFO)
@@ -219,7 +219,7 @@ async def delete_quote_by_id(ctx: Context) -> None:
             await ctx.send(NOT_AUTHORIZED)
             return
 
-        model.delete(id)
+        await quote.delete()
         await ctx.send(f'A mensagen de ID {id} foi removida!')
     except Exception as e:
         LOGGER.error(e)
@@ -246,7 +246,7 @@ async def lunch_place(ctx: Context) -> None:
             created_by=ctx.author.name,
             created_at=datetime.now(),
         )
-        model.create()
+        await model.create()
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
@@ -289,7 +289,7 @@ async def random_lunch_place(ctx: Context) -> None:
         model = LunchPlace()
         ids = model.get_ids_by_server(server)
         _id = choice(ids)
-        place = model.get(_id)
+        place = await model.get(_id)
 
         if not place:
             await ctx.send(WITHOUT_INFO)

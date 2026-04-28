@@ -1,8 +1,8 @@
 import logging
-from typing_extensions import Dict, List, Optional
+from typing_extensions import Dict, Optional
 
 import redis.asyncio as redis
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 import settings
@@ -45,7 +45,7 @@ class RedisOrm:
         await self.client.close()
 
 
-sql_engine = create_engine(
+sql_engine = create_async_engine(
     settings.MARIADB_URI,
     echo_pool=True,
     pool_pre_ping=True,
