@@ -305,11 +305,13 @@ async def last_quote_info(ctx: Context) -> None:
     """
     Captura todas as informações do quote anterior.
     """
+    server = ctx.guild.id
+
     try:
         model = Quotes()
         controll = Controll(ctx.guild.id)
         id = await controll.get_last_quote()
-        quote = model.get(id)
+        quote = await model.get(id, server)
 
         if not quote:
             await ctx.send(WITHOUT_INFO)
