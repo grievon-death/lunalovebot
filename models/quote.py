@@ -82,7 +82,7 @@ class Quotes(BaseTable):
             LOGGER.error('Can not get all cotes cause: %s', e)
             raise e
 
-    async def get_ids_by_server(self, server: str) -> List[str]:
+    async def get_ids_by_server(self, server: str, not_in: List[int]) -> List[str]:
         """
         Retorna uma lista de IDs baseado no servidor.
         """
@@ -90,14 +90,22 @@ class Quotes(BaseTable):
             LOGGER.warning('Please, insert a server to get quotes IDs.')
             return
 
+        stmt = '''
+            select id
+            from quotes
+            where server = :server
+        '''
+        params = {
+            'server': server
+        }
+
+        if not_in:
+            stmt += ' and id not in :not_in;'
+            params['not_in'] = tuple(not_in)
+
         try:
             async with AsyncSession(sql_engine) as session:
-                stmt = text(f'''
-                    select id
-                    from quotes
-                    where server = '{server}';
-                ''')
-                cursor = await session.execute(stmt)
+                cursor = await session.execute(text(stmt), params=params)
                 return cursor.scalars().all()
         except Exception as e:
             LOGGER.error(e)

@@ -1,6 +1,7 @@
 import logging
 from random import choice
 from datetime import datetime
+from typing import Dict, List
 
 from discord import Embed, Intents, Message
 from discord.ext.commands import Context, Bot
@@ -19,6 +20,9 @@ ARG_FAULT = '**Ooops.**\n> É necessária uma mensagem!'
 WITHOUT_INFO = '**Ooops.**\n> Não há informações no momento.'
 INVALID_ARGS = '**Ooops.**\n> Valor inválido!'
 NOT_AUTHORIZED = '**Ooops.**\n> Você não tem autorização para fazer isso!'
+# Global para evitar repetição de quotes.
+NOT_IN_IDS: Dict[int, List] = dict()
+
 
 client = Bot(command_prefix='--', intents=Intents.all())
 
@@ -80,7 +84,8 @@ async def random_quote(ctx: Context) -> None:
     try:
         server = ctx.guild.id
         model = Quotes()
-        ids = await model.get_ids_by_server(server)
+        not_in: List = NOT_IN_IDS.get(server, [])
+        ids = await model.get_ids_by_server(server, not_in)
 
         if not ids:
             await ctx.send(WITHOUT_INFO)
@@ -89,6 +94,13 @@ async def random_quote(ctx: Context) -> None:
         id = choice(ids)
         quote = await model.get(id, server)
         await ctx.send(f'{quote.message}')
+        not_in.append(id)
+
+        # Se a lista for maior que 50% ele remove o primeiro item.
+        if (len(not_in) * 100) / len(ids) >= 50:
+            not_in.pop(0)
+
+        NOT_IN_IDS[server] = not_in
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)
