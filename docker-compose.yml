@@ -1,0 +1,50 @@
+networks:
+  lunabotnet:
+    name: lunabotnet
+    driver: bridge
+
+
+volumes:
+  lunabotdb:
+  lunabotcache:
+
+
+services:
+  lunabot-service:
+    build: .
+    image: lunabot:prod
+    container_name: lunabot-service
+    restart: unless-stopped
+    command: python manage.py bot
+    networks:
+      - lunabotnet
+    env_file: environment/prod.sh
+    depends_on:
+      - lunabot-db
+      - lunabot-cache
+
+  lunabot-db:
+    image: mariadb:10.11
+    container_name: lunabot-db
+    restart: unless-stopped
+    networks:
+      - lunabotnet
+    volumes:
+      - lunabotdb:/var/lib/mysql
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: 1
+    env_file: environment/prod.sh
+    expose:
+      - 3306
+
+  lunabot-cache:
+    image: redis:latest
+    container_name: lunabot-cache
+    restart: unless-stopped
+    command: redis-server --appendonly yes --save 900 1
+    networks:
+      - lunabotnet
+    volumes:
+      - lunabotcache:/data
+    expose:
+      - 6379

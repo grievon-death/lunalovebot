@@ -1,5 +1,8 @@
 export BOT_TOKEN=
-export MARIADB_URI=
 export REDIS_URI=
 export LOGLEVEL=
-export LOGFILE=
+export MARIADB_HOST=
+export MARIADB_PORT=
+export MARIADB_USER=
+export MARIADB_PASSWORD=
+export MARIADB_DATABASE=
