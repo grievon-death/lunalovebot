@@ -301,7 +301,7 @@ async def random_lunch_place(ctx: Context) -> None:
     try:
         server = ctx.guild.id
         model = LunchPlace()
-        ids = model.get_ids_by_server(server)
+        ids = await model.get_ids_by_server(server)
         _id = choice(ids)
         place = await model.get(_id)
 
