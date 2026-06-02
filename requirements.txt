@@ -2,7 +2,7 @@ asyncmy==0.2.9
 discord==2.3.2
 discord.py==2.4.0
 mysqlclient==2.2.5
-redis==7.4.0
+redis==8.0.0
 requests==2.32.3
 setuptools==82.0.1
 SQLAlchemy[asyncio]==2.0.36
