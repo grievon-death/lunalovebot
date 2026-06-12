@@ -8,6 +8,7 @@ from discord.ext.commands import Context, Bot
 
 from core import (Controll, naive_dt_utc_br, get_command_args,
                   get_command_message, prettify_quote)
+from models import Cache
 from models.quote import Quotes
 from models.indicator import Indicators
 from models.lunch_place import LunchPlace
@@ -20,8 +21,6 @@ ARG_FAULT = '**Ooops.**\n> É necessária uma mensagem!'
 WITHOUT_INFO = '**Ooops.**\n> Não há informações no momento.'
 INVALID_ARGS = '**Ooops.**\n> Valor inválido!'
 NOT_AUTHORIZED = '**Ooops.**\n> Você não tem autorização para fazer isso!'
-# Global para evitar repetição de quotes.
-NOT_IN_IDS: Dict[int, List] = dict()
 
 
 client = Bot(command_prefix='--', intents=Intents.all())
@@ -84,7 +83,8 @@ async def random_quote(ctx: Context) -> None:
     try:
         server = ctx.guild.id
         model = Quotes()
-        not_in: List = NOT_IN_IDS.get(server, [])
+        cache = Cache(server)
+        not_in = await cache.get()
         ids = await model.get_ids_by_server(server, not_in)
 
         if not ids:
@@ -100,7 +100,7 @@ async def random_quote(ctx: Context) -> None:
         if (len(not_in) * 100) / len(ids) >= 50:
             not_in.pop(0)
 
-        NOT_IN_IDS[server] = not_in
+        await cache.insert(not_in)
     except Exception as e:
         LOGGER.error(e)
         await ctx.send(ERROR_MESSAGE)

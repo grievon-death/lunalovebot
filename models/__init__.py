@@ -1,5 +1,6 @@
+import json
 import logging
-from typing_extensions import Dict, Optional
+from typing import List, Self
 
 import redis.asyncio as redis
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -18,18 +19,6 @@ class BaseTable(DeclarativeBase):
     pass
 
 
-class RedisBase:
-    async def _decode_dict(self, data: Dict) -> Optional[Dict]:
-        """
-        No retorno todos os campos vêm como bytearray, então tem que fazer esse processo aqui.
-        """
-        try:
-            return { k.decode(): int(v.decode()) for k, v in data.items()}
-        except Exception as e:
-            LOGGER.debug(e)
-            raise e
-
-
 class RedisOrm:
     def __init__(self) -> None:
         self.pool = redis\
@@ -43,6 +32,37 @@ class RedisOrm:
     async def __aexit__(self, excp_a, excp_b, excp_c) -> None:
         await self.pool.disconnect()
         await self.client.close()
+
+
+class Cache:
+    """
+    Cache da lista de últimos ID's dos quotes retornados durante o uso do BOT.
+    """
+    def __init__(self, server: str) -> Self:
+        self.key = f'c:{server}'
+
+    async def insert(self, data: List[int]) -> None:
+        """
+        Adiciona a lista no cache.
+        """
+        try:
+            async with RedisOrm() as cache:
+                await cache.set(self.key, json.dumps(data))
+        except Exception as e:
+            LOGGER.error(f'Cannot insert list on Redis.\nCause: {e}')
+
+    async def get(self) -> List[int]:
+        """
+        Captura a lista do cache.
+        """
+        try:
+            async with RedisOrm() as cache:
+                data = await cache.get(self.key)
+
+            return json.loads(data) if data else []
+        except Exception as e:
+            LOGGER.error(f'Cannot get list from Redis.\nCause: {e}')
+            return []
 
 
 sql_engine = create_async_engine(

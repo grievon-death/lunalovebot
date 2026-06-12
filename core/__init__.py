@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from discord import Embed
 
-from models import RedisBase, RedisOrm
+from models import RedisOrm
 from models.quote import Quotes
 from models.lunch_place import LunchPlace
 
@@ -96,7 +96,7 @@ def prettify_quote(quote: Quotes) -> Embed:
     return embed
 
 
-class Controll(RedisBase):
+class Controll:
     """
     Crontrola comportamentos relativos ao gerenciamento de usabilidade do bot.
     """
