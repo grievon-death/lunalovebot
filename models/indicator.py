@@ -1,13 +1,13 @@
 import logging
 from typing_extensions import Dict, Optional
 
-from models import RedisBase, RedisOrm
+from models import RedisOrm
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class Indicators(RedisBase):
+class Indicators:
     def __init__(self, server: str) -> None:
         self.qkey = f'q:{server}'
         self.rqkey = f'rq:{server}'
@@ -81,7 +81,6 @@ class Indicators(RedisBase):
             
             async with RedisOrm() as client:
                 content = await client.hgetall(self.qkey)
-                content = await self._decode_dict(content)
 
             return content
         except Exception as e:
@@ -97,7 +96,6 @@ class Indicators(RedisBase):
 
             async with RedisOrm() as client:
                 content = await client.hgetall(self.rqkey)
-                content = await self._decode_dict(content)
 
             return content
         except Exception as e:
